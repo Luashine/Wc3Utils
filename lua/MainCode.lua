@@ -3,21 +3,6 @@ if Debug then Debug.beginFile("MainCode") end
 local Counter = 0 ---@type integer
 local ExecutedTrigger ---@type trigger
 
-
----@param func string | function
----@vararg any
---- This hook is changing execute func to be a coroutine.
---- It also allows calling it with a function instead of a name, and passing args
---- to the function
----@diagnostic disable-next-line: duplicate-set-field
-function Hook:ExecuteFunc(func, ...)
-    if type(func) == 'string' then
-        func = _G[func]
-    end
-    local co = coroutine.create(func)
-    coroutine.resume(co, ...)
-end
-
 function CoroutineYielder()
     -- no one should resume this yield, so the function will apear in the log
     coroutine.yield()

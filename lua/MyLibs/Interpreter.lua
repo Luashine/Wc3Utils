@@ -1,4 +1,5 @@
 if Debug and Debug.beginFile then Debug.beginFile("Interpreter") end
+do
 --[[
 Interpreter v1.0.0 by Tomotz
 This tool allows connecting to your game with an external cli, and run lua code in it - it allows you to open a windows terminal and run code inside your game. Works for single player and in replays
@@ -53,7 +54,6 @@ TriggerHappy GameStatus (Replay Detection) https://www.hiveworkshop.com/threads/
 Updated: 28 Oct 2025
 --]]
 
-do
 -- Period to check for new commands to execute
 -- Note that once a command was executed, the polling period increases to 0.1 seconds to allow fast interpreting.
 -- The period goes back to normal after no new commands were found for 60 seconds.

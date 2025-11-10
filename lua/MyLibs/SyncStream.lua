@@ -1,47 +1,47 @@
 if Debug then Debug.beginFile("SyncStream") end
-    --[[
-    By Trokkin https://www.hiveworkshop.com/threads/syncstream.349055/
+--[[
+By Trokkin https://www.hiveworkshop.com/threads/syncstream.349055/
 
-    Provides functionality to designed to safely sync arbitrary amounts of data.
-    Uses timers to spread BlzSendSyncData calls over time.
+Provides functionality to designed to safely sync arbitrary amounts of data.
+Uses timers to spread BlzSendSyncData calls over time.
 
-    API:
-    --- Adds data to the queue to be synced.
-    --- Note that SyncStream.sync must be called from all clients, even the ones that don't have the data. getLocalData can be different between clients.
-    ---@param whichPlayer player -- the player who's data is used as the sync data
-    ---@param getLocalData string | fun():string -- the data to sync, or a callback that returns the data to sync
-    ---@param callback fun(syncedData:string, whichPlayer:player) -- the callback to call once the sync is done.
-    ---@param ... any -- additional arguments to pass to the callback. Note that the args must be the same for all clients.
-    function SyncStream.sync(whichPlayer, getLocalData, callback, ...)
+API:
+--- Adds data to the queue to be synced.
+--- Note that SyncStream.sync must be called from all clients, even the ones that don't have the data. getLocalData can be different between clients.
+---@param whichPlayer player -- the player who's data is used as the sync data
+---@param getLocalData string | fun():string -- the data to sync, or a callback that returns the data to sync
+---@param callback fun(syncedData:string, whichPlayer:player) -- the callback to call once the sync is done.
+---@param ... any -- additional arguments to pass to the callback. Note that the args must be the same for all clients.
+function SyncStream.sync(whichPlayer, getLocalData, callback, ...)
 
-    --- Same as SyncStream.sync, but waiting until the sync was done and only then returns.
-    --- Must be called from a context where you can call TriggerSleepAction().
-    --- If called twice, the second call will wait for the first one to finish.
-    ---@param whichPlayer player
-    ---@param getLocalData string | fun():string
-    ---@return string
-	function SyncStream.blockingSync(whichPlayer, getLocalData)
+--- Same as SyncStream.sync, but waiting until the sync was done and only then returns.
+--- Must be called from a context where you can call TriggerSleepAction().
+--- If called twice, the second call will wait for the first one to finish.
+---@param whichPlayer player
+---@param getLocalData string | fun():string
+---@return string
+function SyncStream.blockingSync(whichPlayer, getLocalData)
 
-    Patch by Tomotz Nov 2025:
-    Advantages over the original version are mostly performance related (This library needs about half the packets on any input size):
-    1. No header packet - this means that for small data sizes (up to 254 character strings) this sends half the amount of packets
-    2. Smaller headers for data packets - each header is only 1 character instead of 6 in the original version I think (so more room for data)
-    3. Packet size increased to the max possible (I think) - 254 characters instead of 200
-    4. Encoder is more efficient - only encodes null terminators since they are the only unsupported character for syncs.
+Patch by Tomotz Nov 2025:
+Advantages over the original version are mostly performance related (This library needs about half the packets on any input size):
+1. No header packet - this means that for small data sizes (up to 254 character strings) this sends half the amount of packets
+2. Smaller headers for data packets - each header is only 1 character instead of 6 in the original version I think (so more room for data)
+3. Packet size increased to the max possible (I think) - 254 characters instead of 200
+4. Encoder is more efficient - only encodes null terminators since they are the only unsupported character for syncs.
 
-    Requirements:
-        DebugUtils by Eikonium                          @ https://www.hiveworkshop.com/threads/330758/
-        Total Initialization by Bribe                   @ https://www.hiveworkshop.com/threads/317099/
-        StringEscape by Tomotz
+Requirements:
+    DebugUtils by Eikonium                          @ https://www.hiveworkshop.com/threads/330758/
+    Total Initialization by Bribe                   @ https://www.hiveworkshop.com/threads/317099/
+    StringEscape by Tomotz
 
-    ]]
+]]
 OnInit.global("SyncStream", function()
     --CONFIGURATION
     local PREFIX = "Sync"
     local PACKAGE_PER_TICK = 1 -- amount of packages per interval. Up to 32 should be desync safe (but might cause lag spikes)
     local PACKAGE_TICK_PER_SECOND = 8 -- interval in which the syncing takes place. Up to 32 should be desync safe (but might cause lag spikes)
     local IS_DEBUG = false -- enable debug prints
-    local LAST_HUMAN_SLOT = MaxHumanPlayers == nil and (bj_MAX_PLAYER_SLOTS - 1) or (MaxHumanPlayers - 1) -- the last slot id that might belongs to a human player
+    local LAST_HUMAN_SLOT = bj_MAX_PLAYER_SLOTS - 1 -- the last slot id that might belongs to a human player
     --END CONFIGURATION
 
     --- Calculated values from configuration
