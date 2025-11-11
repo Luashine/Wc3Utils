@@ -38,8 +38,9 @@ Requirements:
 OnInit.global("SyncStream", function()
     --CONFIGURATION
     local PREFIX = "Sync"
-    local PACKAGE_PER_TICK = 1 -- amount of packages per interval. Up to 32 should be desync safe (but might cause lag spikes)
-    local PACKAGE_TICK_PER_SECOND = 8 -- interval in which the syncing takes place. Up to 32 should be desync safe (but might cause lag spikes)
+    --- Setting the next locals to 1, 8 seems to not be noticable when syncing during the game. Up to 32, 32 should be desync safe, but will cause lag spikes when syncing large data
+    local PACKAGE_PER_TICK = 2
+    local PACKAGE_TICK_PER_SECOND = 16
     local IS_DEBUG = false -- enable debug prints
     local LAST_HUMAN_SLOT = bj_MAX_PLAYER_SLOTS - 1 -- the last slot id that might belongs to a human player
     --END CONFIGURATION
@@ -68,7 +69,7 @@ OnInit.global("SyncStream", function()
     ---@field is_local boolean
     ---@field outPackets string[] -- list of outPackets to send
     ---@field callbacks StreamFuncAndArgs[] -- when a SyncStream.sync ends the syncing, we will call the first function in this list, and remove it
-    ---@field inData string -- aggregated data received in this stream so far. zeroed when a full sync is done
+    ---@field inData string[] -- aggregated data received in this stream so far. zeroed when a full sync is done
     SyncStream = {}
     SyncStream.__index = SyncStream
 
@@ -80,7 +81,7 @@ OnInit.global("SyncStream", function()
             is_local = owner == localPlayer,
             outPackets = {},
             callbacks = {},
-            inData = ""
+            inData = {},
         }, SyncStream)
     end
 
@@ -205,15 +206,41 @@ OnInit.global("SyncStream", function()
                 end
                 local package = stream.outPackets[1]
                 debugPrint(false, "Sending package", #package, package)
-                local sendResult = BlzSendSyncData(PREFIX, package)
-                debugPrint(false, "BlzSendSyncData returned:", sendResult)
-                if sendResult then
+                if BlzSendSyncData(PREFIX, package) then
                     table.remove(stream.outPackets, 1)
                 else
                     debugPrint(true, "BlzSendSyncData FAILED for package of length", #package)
                 end
             end
         end)
+    end
+
+    ---@param owner player
+    ---@param package string
+    function handleData(owner, package)
+        local stream = streams[GetPlayerId(owner)]
+        if stream == nil then
+            debugPrint(true, "SyncStream panic: no stream found for player: " .. GetPlayerName(owner))
+            return
+        end
+        if package == nil then
+            debugPrint(true, "SyncStream panic: bad package received from player: " .. GetPlayerName(owner))
+            return
+        end
+        debugPrint(false, "Got sync package from player", GetPlayerId(owner), #package, package)
+        if next(stream.callbacks) == nil then
+            debugPrint(true, "SyncStream panic: sync packet received but no function set to handle it")
+            return
+        end
+        table.insert(stream.inData, package)
+        if #package < FLIT_DATA_SIZE then
+            --- got a packet that is not full. This means it's the last packet
+            local callbackData = table.remove(stream.callbacks, 1)
+            local rawData = RemoveEscaping(table.concat(stream.inData), {0})
+            stream.inData = {}
+            debugPrint(false, "Last flit received for player", GetPlayerId(owner), "calling callback", #package)
+            callbackData.callback(rawData, owner, table.unpack(callbackData.args))
+        end
     end
 
     OnInit.global(function()
@@ -231,29 +258,7 @@ OnInit.global("SyncStream", function()
         TriggerAddAction(syncTrigger, function()
             local owner = GetTriggerPlayer()
             local package = BlzGetTriggerSyncData()
-            local stream = streams[GetPlayerId(owner)]
-            if stream == nil then
-                debugPrint(true, "SyncStream panic: no stream found for player: " .. GetPlayerName(owner))
-                return
-            end
-            if package == nil then
-                debugPrint(true, "SyncStream panic: bad package received from player: " .. GetPlayerName(owner))
-                return
-            end
-            debugPrint(false, "Got sync package from player", GetPlayerId(owner), #package, package)
-            if next(stream.callbacks) == nil then
-                debugPrint(true, "SyncStream panic: sync packet received but no function set to handle it")
-                return
-            end
-            stream.inData = stream.inData .. package
-            if #package < FLIT_DATA_SIZE then
-                --- got a packet that is not full. This means it's the last packet
-                local rawData = RemoveEscaping(stream.inData, {0})
-                stream.inData = ""
-                local callbackData = table.remove(stream.callbacks, 1)
-                debugPrint(false, "Last flit received for player", GetPlayerId(owner), "calling callback", #package)
-                callbackData.callback(rawData, owner, table.unpack(callbackData.args))
-            end
+            handleData(owner, package)
         end)
     end)
 end)
