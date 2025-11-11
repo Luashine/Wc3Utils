@@ -17,6 +17,9 @@ GameStatus global variable
 --- Get the time passed from game start
 GetElapsedGameTime()
 
+--- Handle chat commands - listens to any user input starting with "-". Splits the input by spaces and calls the appropriate handler function with the command arguments and the trigger player as arguments.
+HandleChatCmd()
+
 Updated: Nov 2025
 --]]
 
@@ -85,6 +88,53 @@ OnInit.global(function()
     gametime_initialized = true
     gameStartTimer = CreateTimer()
     TimerStart(gameStartTimer, 0xF4240, false, nil)
+end)
+
+
+--- Handle chat commands - listens to any user input starting with "-". Splits the input by spaces and calls the appropriate handler function with the command arguments and the trigger player as arguments.
+
+-- Table mapping event chat command to their handler functions
+local chatHandlers = {}
+
+function StrSplitBySpace(str)
+    local result = {}
+    for word in string.gmatch(str, "\x25S+") do
+        table.insert(result, word)
+    end
+    return result
+end
+
+function HandleChatCmd()
+    local triggerPlayer = GetTriggerPlayer() ---@type player
+    local chatStr = GetEventPlayerChatString()
+    local spliced = StrSplitBySpace(chatStr)
+    local cmd = string.lower(spliced[1])
+    table.remove(spliced, 1)
+    local args = spliced
+    if chatHandlers[cmd] then
+        chatHandlers[cmd](triggerPlayer, args)
+    end
+end
+
+-- can't init some of these things in the root as the functions are not all defined yet
+-- the functions here can get the command arguments, and the trigger player as args
+OnInit.trig(function()
+    local ChatCmdTrigger = CreateTrigger()
+    TriggerAddAction(ChatCmdTrigger, HandleChatCmd)
+    for i = 0, GetBJMaxPlayers() - 1 do
+        TriggerRegisterPlayerChatEvent(ChatCmdTrigger, Player(i), "-", false)
+    end
+
+    chatHandlers =  {
+        ["-d"] = DumpRecentWrap,
+        ["-s"] = CreateUnitForPlayer,
+        ["-c"] = CrashTest,
+        ["-e"] = TestEscaping,
+        ["-se"] = TestSerializer,
+        ["-sy"] = TestSyncStream,
+        ["-o"] = TestOrigSync,
+        ["-f"] = FlushLog,
+    }
 end)
 
 end

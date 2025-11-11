@@ -1,8 +1,10 @@
 if Debug then Debug.beginFile("FileIO") end
 --[[
-    Optimized FileIO based on Trokkin's version
+    Optimized FileIO based on Trokkin's version (https://www.hiveworkshop.com/threads/fileio-lua-optimized.347049/)
 
     Provides functionality to read and write files, optimized with lua functionality in mind.
+    This version allows writing/reading any data including characters that the preload natives can't work with, by escaping them.
+    This version also allows writing files that are not intended to be loaded back, which makes them smaller and more readable.
 
     API:
 

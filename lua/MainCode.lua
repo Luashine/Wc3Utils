@@ -124,50 +124,7 @@ function FlushLog()
     LogWrite("")
 end
 
--- Table mapping event chat command to their handler functions
-local chatHandlers = {}
-
--- can't init some of these things in the root as the functions are not all defined yet
--- the functions here can get the command arguments, and the trigger player as args
-OnInit.trig(function() chatHandlers =  {
-        ["-d"] = DumpRecentWrap,
-        ["-s"] = CreateUnitForPlayer,
-        ["-c"] = CrashTest,
-        ["-e"] = TestEscaping,
-        ["-se"] = TestSerializer,
-        ["-sy"] = TestSyncStream,
-        ["-o"] = TestOrigSync,
-        ["-f"] = FlushLog,
-    }
-end)
-
-function strSplitBySpace(str)
-    local result = {}
-    for word in string.gmatch(str, "\x25S+") do
-        table.insert(result, word)
-    end
-    return result
-end
-
-function handleChatCmd()
-    local triggerPlayer = GetTriggerPlayer() ---@type player
-    local chatStr = GetEventPlayerChatString()
-    local spliced = strSplitBySpace(chatStr)
-    local cmd = string.lower(spliced[1])
-    table.remove(spliced, 1)
-    local args = spliced
-    if chatHandlers[cmd] then
-        chatHandlers[cmd](triggerPlayer, args)
-    end
-end
-
 function RegisterEvents()
-    local ChatCmdTrigger = CreateTrigger()
-    TriggerAddAction(ChatCmdTrigger, handleChatCmd)
-    for i = 0, GetBJMaxPlayers() - 1 do
-        TriggerRegisterPlayerChatEvent(ChatCmdTrigger, Player(i), "-", false)
-    end
-
     ExecutedTrigger = CreateTrigger()
     TriggerAddAction(ExecutedTrigger, ExecutedFunctionWithTSA)
     RegisterFastTimer()
