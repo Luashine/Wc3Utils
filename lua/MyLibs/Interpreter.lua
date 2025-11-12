@@ -1,7 +1,7 @@
 if Debug and Debug.beginFile then Debug.beginFile("Interpreter") end
 do
 --[[
-Interpreter v1.0.0 by Tomotz
+Interpreter v1.0.1 by Tomotz
 This tool allows connecting to your game with an external cli, and run lua code in it - it allows you to open a windows terminal and run code inside your game. Works for single player and in replays
 
 Features:
