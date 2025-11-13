@@ -1,4 +1,5 @@
 if Debug then Debug.beginFile("SyncStream") end
+do
 --[[
 By Trokkin https://www.hiveworkshop.com/threads/syncstream.349055/
 
@@ -55,7 +56,6 @@ OnInit.global("SyncStream", function()
     ---@type table<integer, SyncStream>
     local streams = {}
     local syncTimer
-    local isTimerTicking = false
     local localPlayer ---@type player
 
     --- A SyncStream callback and a table of arguments for it
@@ -176,14 +176,9 @@ OnInit.global("SyncStream", function()
             end
             parsePackage(stream, getLocalData)
         end
-        start_sync_timer()
     end
 
-    function start_sync_timer()
-        if isTimerTicking then
-            return
-        end
-        isTimerTicking = true
+    function startSyncTimer()
         --- Setup sender timer
         local stream = streams[GetPlayerId(GetLocalPlayer())]
         if not stream.is_local then
@@ -192,13 +187,6 @@ OnInit.global("SyncStream", function()
         end
         TimerStart(syncTimer, 1 / PACKAGE_TICK_PER_SECOND, true, function()
             for _ = 1, PACKAGE_PER_TICK do
-                -- We want all the player timers to stop at the same time, so we wait for all callbacks to be called
-                if next(stream.callbacks) == nil then
-                    isTimerTicking = false
-                    PauseTimer(syncTimer)
-                    debugPrint(false, "SyncStream: Timer paused")
-                    return
-                end
                 --- no more packets to send
                 if next(stream.outPackets) == nil then
                     break
@@ -259,6 +247,8 @@ OnInit.global("SyncStream", function()
             local package = BlzGetTriggerSyncData()
             handleData(owner, package)
         end)
+        startSyncTimer()
     end)
 end)
+end
 if Debug then Debug.endFile() end
