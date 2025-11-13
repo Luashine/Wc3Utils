@@ -1,5 +1,6 @@
 
-# wc3_interpreter.py version 1.0.1
+# wc3_interpreter.py
+VERSION = "1.0.1"
 
 import os
 import re
@@ -177,10 +178,10 @@ def main():
     signal.signal(signal.SIGSEGV, signal_handler)
     signal.signal(signal.SIGILL, signal_handler)
 
-    print("Wc3 Interpreter 1.0.0. For help, type `help`.")
+    print(f"Wc3 Interpreter {VERSION}. For help, type `help`.")
     while True:
         # get console input
-        command = input(">>> ")
+        command = input(str(nextFile) + " >>> ")
         if command == "exit":
             remove_all_files()
             break
@@ -189,7 +190,7 @@ def main():
             print("  help - Show this help message")
             print("  exit - Exit the program")
             print("  restart - Cleans the state to allow a new game to be started (this is the same as exiting and restarting the script)")
-            print("  search - use in case of closing the interpreter (or crashing), searches for the file the game is currently reading. Use only when game is not paused")
+            print("  jump <number> - use in case of closing the interpreter (or crashing) while game is still running. Starts sending commands from a specific file index. Should use the index printed in the prompt before the `>>>`")
             print("  file <full file path> - send a file with lua commands to the game. end the file with `return <data>` to print the data to the console")
             print("  <lua command> - run a lua command in the game. If the command is a `return` statement, the result will be printed to the console.")
             print("** Note: exiting or restarting the script while the game is running will cause it to stop working until the game is also restarted **")
@@ -199,15 +200,8 @@ def main():
             nextFile = 0
             print("State reset. You can start a new game now.")
             continue
-        elif command == "search":
-            create_file(FILES_ROOT + f"in{nextFile}.txt", "return 1")
-            time.sleep(1)
-            while not os.path.isfile(f"FILES_ROOT + out{nextFile}.txt") and nextFile < 1000:
-                nextFile += 1
-                create_file(FILES_ROOT + f"in{nextFile}.txt", "return 1")
-                time.sleep(1)
-            if nextFile < 1000:
-                print("Success")
+        elif command.startswith("jump "):
+            nextFile = int(command[5:].strip())
             continue
         elif command.startswith("file "):
             filepath = command[5:].strip()

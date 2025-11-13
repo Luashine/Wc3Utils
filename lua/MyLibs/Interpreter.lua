@@ -1,5 +1,4 @@
-if Debug and Debug.beginFile then Debug.beginFile("Interpreter") end
-do
+if Debug then Debug.beginFile("Interpreter") end
 --[[
 Interpreter v1.0.1 by Tomotz
 This tool allows connecting to your game with an external cli, and run lua code in it - it allows you to open a windows terminal and run code inside your game. Works for single player and in replays
@@ -50,10 +49,9 @@ or just to copy the `SetGameStatus` function from there and call it in your map 
 Credits:
 TriggerHappy GameStatus (Replay Detection) https://www.hiveworkshop.com/threads/gamestatus-replay-detection.293176/
  * SetGameStatus was taken from there to allow detecting that the game is running in replay mode.
-
-Updated: 28 Oct 2025
 --]]
 
+do
 -- Period to check for new commands to execute
 -- Note that once a command was executed, the polling period increases to 0.1 seconds to allow fast interpreting.
 -- The period goes back to normal after no new commands were found for 60 seconds.
@@ -62,8 +60,60 @@ local PERIOD = 5
 local FILES_ROOT = "Interpreter"
 
 -- The code will desync in multiplayer, so we only allow running it in single player or replay mode
-local isMultiplayer ---@type boolean
+local isDisabled ---@type boolean
 
+EnabledBreakpoints = {} ---@type table<string | integer, boolean> -- saves for each breakpoint id if it is disabled. Allows the debugger to disable/enable bps
+
+local nextBpFile = 0
+--- Put a breakpoint in your code that will halt execution of a function and wait for external debugger instructions.
+---@param breakpointId integer | string -- Unique id for the breakpoint. Used for auto breakpoints set from the debugger. When called from user code, it should contain a unique string (that is not a number) to allow you to recognise the breakpoint.
+---@param localVariables table<string, any>? -- a table mapping a local variable name to it's value. Will be used as the environment in the code called from the debugger. Note that for manual breakpoints, if you want to access locals from the debugger, you need to pass them here, and update them after the breakpoint finishes.
+---@param condition string? -- a string containing a lua expression. Breakpoint will only trigger if the expression is true.
+---@param startsEnabled boolean? -- if false, the breakpoint will start disabled and must be enabled from the debugger. Default is true. This allows you to dynamically enable a static breakpoint (which can be set anywhere in the code unlike the dynamic one)
+--- Notes: 1. This function should only be called from yieldable context.
+--- 2. Execution of the thread will not continue unless you connect the debugger, be sure not to keep breakpoints in your final code.
+--- 3. To avoid desyncs, this function will do nothing in multiplayer
+function Breakpoint(breakpointId, localVariables, condition, startsEnabled)
+    if isDisabled then return end
+
+    if not coroutine.isyieldable() then
+        if Debug then
+            Debug.throwError("Coroutine is not yieldable.")
+        end
+        return
+    end
+    if EnabledBreakpoints[breakpointId] == nil then
+
+        EnabledBreakpoints[breakpointId] = (startsEnabled == nil) or startsEnabled
+    end
+    if EnabledBreakpoints[breakpointId] == false then return end
+    if condition then
+        local cond = load(condition)
+        if cond == nil then
+            Debug.throwError("error executing breakpoint condition")
+            return
+        end
+        if not cond() then return end
+    end
+    local outData = tostring(breakpointId)
+
+    while true do
+        FileIO.Save(FILES_ROOT .. "\\out_bp" .. nextBpFile .. ".txt", outData)
+        local commands = nil ---@type string?
+        while true do
+            commands = FileIO.Load(FILES_ROOT .. "\\bp_in" .. nextBpFile .. ".txt")
+            if commands ~= nil then break end
+            TriggerSleepAction(1)
+        end
+        nextBpFile = nextBpFile + 1
+        if commands == "continue" then return end
+        local cur_func = load(commands, nil, nil, localVariables)
+        outData = "nil"
+        if cur_func ~= nil then
+            outData = cur_func()
+        end
+    end
+end
 
 local nextFile = 0
 local curPeriod = PERIOD
@@ -73,7 +123,7 @@ function CheckFiles()
     --- first we trigger the next run in case this run crashes or returns
     TimerStart(timer, curPeriod, false, CheckFiles)
     -- To make the replay as close as possible to the original game, we do call the timer on both, and just return right away if multiplayer
-    if isMultiplayer then return end
+    if isDisabled then return end
     local commands = FileIO.Load(FILES_ROOT .. "\\in" .. nextFile .. ".txt")
     if commands ~= nil then
         -- command found, increase period to 0.1s, run the command and return the result
@@ -94,18 +144,8 @@ function CheckFiles()
     end
 end
 
-function CountActivePlayers()
-    local count = 0
-    for plr = 0, bj_MAX_PLAYER_SLOTS - 1 do
-        if GetPlayerController(Player(plr)) == MAP_CONTROL_USER and GetPlayerSlotState(Player(plr)) == PLAYER_SLOT_STATE_PLAYING then
-            count = count + 1
-        end
-    end
-    return count
-end
-
 function TryInterpret()
-    isMultiplayer = ((not GameStatus) or GameStatus == GAME_STATUS_ONLINE) and CountActivePlayers() > 1
+    isDisabled = ((not GameStatus) or GameStatus == GAME_STATUS_ONLINE) and (not bj_isSinglePlayer)
     -- Timer is leaked on purpose to keep it running throughout the entire game
     TimerStart(CreateTimer(), 5, false, CheckFiles)
 end
@@ -113,4 +153,4 @@ end
 OnInit(TryInterpret)
 
 end
-if Debug and Debug.endFile then Debug.endFile() end
+if Debug then Debug.endFile() end
