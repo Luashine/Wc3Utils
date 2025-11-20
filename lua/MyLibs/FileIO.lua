@@ -3,9 +3,10 @@ if Debug then Debug.beginFile("FileIO") end
     Optimized FileIO v1.0.0 by Tomotz
     Based on Trokkin's version (https://www.hiveworkshop.com/threads/fileio-lua-optimized.347049/)
 
-    Provides functionality to read and write files, optimized with lua functionality in mind.
-    This version allows writing/reading any data including characters that the preload natives can't work with, by escaping them.
-    It's similar to Antares's Stable Lua FileIO, only it promisses that the data you written will be the same data you read back (while his version removes some special characters).
+    - Read and write files with any data.
+    - This version allows writing/reading any data including characters that the preload natives can't work with, by escaping them.
+    - Allow Saving with the `-isLoadable` that will make the file look nicer if you never plan to load it.
+    It's similar to Antares's Stable Lua FileIO, only it allows writing null terminators as well.
 
     API:
 
@@ -54,7 +55,7 @@ if Debug then Debug.beginFile("FileIO") end
     ---@param isLoadable any
     local function open(filename, isLoadable)
         -- turns out you can't save a file without an extension.
-        Debug.assert(filename:find('.', 1, true), "FileIO: filename must have an extension")
+        if Debug then Debug.assert(filename:find('.', 1, true), "FileIO: filename must have an extension") end
         name = filename
         PreloadGenClear()
         if isLoadable then

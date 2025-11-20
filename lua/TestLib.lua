@@ -258,24 +258,22 @@ function test_sync()
 end
 
 function test_saveLoad()
-    local success = Serializer.saveFile(Player(0), origTable, "Savegames\\DotD 6\\test_save_load_" .. PlayersArr[0].rawName .. ".txt")
+    local success = Serializer.saveFile(Player(0), origTable, "Savegames\\TestMap\\test_save_load_0.txt")
     Debug.assert(success, "saveFile failed")
     LogWrite("saveFile saved")
 
-    function EndFunc(loadedVars, whichPlayer)
+    -- Doing GetLocalPlayer here to make sure the syncing really work even when running in LAN with 2 players on the same computer
+    local error = Serializer.loadFile(Player(0),"Savegames\\TestMap\\test_save_load_" .. GetPlayerId((GetLocalPlayer())) .. ".txt", function(loadedVars)
         LogWrite("in callback")
         if loadedVars == nil then
             Debug.throwError("loadFile returned nil")
             return
         end
-        Debug.assert(deepCompare(origTable, loadedVars[1]), "loaded table doesn't match the original table")
+        Debug.assert(deepCompare(origTable, loadedVars), "loaded table doesn't match the original table")
         LogWrite("EndFunc test ended! validation done")
 
-    end
-
-    local error = Serializer.loadFile(Player(0),"Savegames\\DotD 6\\test_save_load_" ..
-    PlayersArr[GetPlayerId((GetLocalPlayer()))].rawName .. ".txt", EndFunc)
-    LogWrite("(If this is an error it might be ok for the wrong player) loaded returned:", error)
+    end)
+    LogWrite("loaded returned:", error)
 end
 
 --- Syncs all the data in input. Must be called from a yieldable coroutine
@@ -395,7 +393,7 @@ OnInit.final(function()
     -- LogWrite("escaping validation done")
     -- test_dumpLoad()
     -- LogWrite("test_dumpLoad validation done")
-    testFileIO()
+    -- testFileIO()
     -- ExecuteFunc(test_sync)
     -- ExecuteFunc(test_saveLoad)
 end)

@@ -106,6 +106,7 @@ end
 
 function TestSerializer()
     test_dumpLoad()
+    test_saveLoad()
     print("All serializer tests done")
 end
 
