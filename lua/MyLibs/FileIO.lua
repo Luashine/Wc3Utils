@@ -24,17 +24,11 @@ if Debug then Debug.beginFile("FileIO") end
             - field that indicates that files can be accessed correctly.
 
     Requirements:
-        StringEscape by Tomotz
+        StringEscape by Tomotz                          @ https://www.hiveworkshop.com/threads/optimized-syncstream-and-stringescape.367925/
+        Total Initialization by Bribe                   @ https://www.hiveworkshop.com/threads/317099/
 
     Optional requirements:
         DebugUtils by Eikonium                          @ https://www.hiveworkshop.com/threads/330758/
-        Total Initialization by Bribe                   @ https://www.hiveworkshop.com/threads/317099/
-
-    Inspired by:
-        - TriggerHappy's Codeless Save and Load         @ https://www.hiveworkshop.com/threads/278664/
-        - ScrewTheTrees's Codeless Save/Sync concept    @ https://www.hiveworkshop.com/threads/325749/
-        - Luashine's LUA variant of TH's FileIO         @ https://www.hiveworkshop.com/threads/307568/post-3519040
-        - HerlySQR's LUA variant of TH's Save/Load      @ https://www.hiveworkshop.com/threads/331536/post-3565884
 
     Patch by Tomotz 1 Mar 2025:
         - Added escaping to all characters unsupported by FileIO. Those include null terminator (for saving and loading),
@@ -43,7 +37,6 @@ if Debug then Debug.beginFile("FileIO") end
         less character are escaped, and there are less extra characters added by FileIO. This also means there is more room for user
         data in each Preload call. Such files will not be loadable with FileIO.Load.
 --]]
-OnInit.global("FileIO", function()
     local RAW_PREFIX = ']]i([['
     local RAW_SUFFIX = ']])--[['
     local MAX_PRELOAD_SIZE = 256
@@ -154,13 +147,13 @@ OnInit.global("FileIO", function()
         return false
     end
 
-    local fileIO_enabled = saveAsserted('TestFileIO.pld', 'FileIO is Enabled')
-
     FileIO = {
         Save = savefile,
         Load = loadfile,
         SaveAsserted = saveAsserted,
-        enabled = fileIO_enabled,
     }
+
+OnInit.global(function()
+    FileIO.enabled = saveAsserted('TestFileIO.pld', 'FileIO is Enabled')
 end)
 if Debug then Debug.endFile() end
