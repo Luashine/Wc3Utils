@@ -82,7 +82,7 @@ function test_AddEscaping()
     local tests = {
         -- input, output with load chars escaped, output with save chars escaped
         {"hello", "hello", "hello"},
-        {"\0\10\13\91\92\93", "\248\249\250\251\252\253", "\248\10\13\91\249\93"}, -- fileio_unsupported_chars replaced
+        {"\0\10\13\91\92\93", "\248\249\250\91\251\252", "\248\10\13\91\92\93"}, -- fileio_unsupported_chars replaced (note: 91 and 92 are supported by FileIO in save mode)
         {"\247", "\247\247", "\247\247"}, -- escape_char doubled
         {"\248", "\247\248", "\247\248"},-- unprintable_replacables escaped
         {"\250", "\247\250", "\250"},
@@ -103,10 +103,10 @@ end
 function test_RemoveEscaping()
     local tests = {
         {"hello", "hello", "hello"},
-        {"\248\249\250\251\252\253", "\0\10\13\91\92\93", "\0\92\250\251\252\253"}, -- reversed replacements
+        {"\248\249\250\91\251\252", "\0\10\13\91\92\93", "\0\249\250\91\251\252"}, -- reversed replacements (note: with SaveChars only byte 0 is replaced, others stay as-is)
         {"\247\247", "\247", "\247"}, -- double escape_char restored
         {"\247\248", "\248", "\248"}, -- escaped chars restored
-        {"hello\249\247\247\248world", "hello\n\247\0world", "hello\92\247\0world"},
+        {"hello\249\247\247\248world", "hello\n\247\0world", "hello\249\247\0world"},
         {"hello\247\248world", "hello\248world", "hello\248world"}
     }
 
