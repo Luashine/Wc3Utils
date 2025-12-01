@@ -1,7 +1,7 @@
 if Debug then Debug.beginFile("LogUtils") end
 do
 --[[
-LogUtils v1.0.3 by Tomotz
+LogUtils v1.0.4 by Tomotz
 This library provides a log file for the game.
 
 Features beyond what FileIO offers:
@@ -10,6 +10,7 @@ Features beyond what FileIO offers:
  - Maximum log length - when reached, will open a new log file (and memory buffer) to avoid long writes
  - Adds the player id to the log name to allow multiple logs from a single game on the same computer (for map testing)
  - `print` like interface for arguments
+ - Supports pretty printing tables and wc3 handles
 
 Interface:
     LogWrite(...)
@@ -27,7 +28,7 @@ Interface:
         the log, it might hurt performance
 
 Installation instructions:
-Copy the code to your map.
+Copy the code to your map. For Pretty prints of tables and handles, also include PrettyString and HandleType.
 
 Credits:
 TriggerHappy GameStatus (Replay Detection) https://www.hiveworkshop.com/threads/gamestatus-replay-detection.293176/
@@ -36,10 +37,11 @@ Requires:
 FileIO (lua) by Trokkin - https://www.hiveworkshop.com/threads/fileio-lua-optimized.347049/
 TotalInitialization by Bribe - https://www.hiveworkshop.com/threads/total-initialization.317099/
 
-Updated: Nov 2025
+Optionaly requires:
+PrettyString by Tomotz - if you want wc3 handles and tables to be printed nicely in the log
+
+Updated: Dec 2025
 --]]
-LIBRARY_LogUtils = true
-local SCOPE_PREFIX = "LogUtils_" ---@type string requires TotalInitialization, FileIO
 
 -- Configurations:
 
@@ -62,7 +64,7 @@ local MAX_FILES = 10
 -- Same as MAX_FILES, but for replay logs
 local MAX_FILESREPLAY = 500
 
--- If true, will try writing the map name to the long on init (using TRIGSTR_001)
+-- If true, will try writing the map name to the log on init (using TRIGSTR_001)
 local WRITE_MAP_NAME = true
 
 -- Local variables for internal use
@@ -106,8 +108,10 @@ end
 function LogWriteNoFlush(...)
     local args = {...}
     for i = 1, #args do
-        args[i] = tostring(args[i]) -- Convert each argument to a string
+        -- Convert each argument to a string
+        args[i] = PrettyString and PrettyString(args[i]) or tostring(args[i])
     end
+
     local fullLine = tostring(math.floor(GetElapsedGameTime())) .. ":" .. table.concat(args, " ")
     local lineLen = #fullLine
     if WriteBufferSize + lineLen > MAX_BUFF_LEN then

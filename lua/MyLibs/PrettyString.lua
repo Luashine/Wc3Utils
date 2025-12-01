@@ -1,4 +1,4 @@
-
+if Debug then Debug.beginFile("PrettyString") end
 do
 --[[
 PrettyString v1.0.0 by Tomotz
@@ -66,3 +66,4 @@ OnInit.final(function()
     end
 end)
 end
+if Debug then Debug.endFile() end
