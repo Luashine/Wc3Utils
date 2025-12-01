@@ -106,12 +106,14 @@ end
 
 -- Writes a line to the WriteBuffer to be logged
 function LogWriteNoFlush(...)
+    -- If memory pressure is ever an issue, rewrite args to not create a new table on each call using select()
     local args = {...}
     for i = 1, #args do
         -- Convert each argument to a string
         args[i] = PrettyString and PrettyString(args[i]) or tostring(args[i])
     end
-
+  
+    -- Memory: similarly, this creates 3 intermediate strings *on the Lua side*. string.format ought to be better
     local fullLine = tostring(math.floor(GetElapsedGameTime())) .. ":" .. table.concat(args, " ")
     local lineLen = #fullLine
     if WriteBufferSize + lineLen > MAX_BUFF_LEN then
