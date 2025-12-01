@@ -37,7 +37,60 @@ function Hook:ExecuteFunc(func, ...)
     coroutine.resume(co, ...)
 end
 
+---@param val number
+---@return integer
+function Round(val)
+    return math.floor(val + .5)
+end
 
+do --- Table and Array Helpers
+---@param arr any[]
+---@param value any
+---@return integer? -- first index of value accurance in arr or nil if not found
+function ArrayFind(arr, value)
+    for i, v in ipairs(arr) do
+        if v == value then
+            return i -- Return index if found
+        end
+    end
+    return nil -- Return nil if not found
+end
+
+---@param arr any[]
+---@param value any
+---@return any? -- the removed value or nil if not found
+--- removes the first occurance of value in arr
+function ArrayRemove(arr, value)
+    local index = ArrayFind(arr, value)
+    if index then
+        return table.remove(arr, index)
+    end
+    return nil
+end
+
+function SyncedTable:ToIndexedTables()
+    local t = {}
+    t[1] = {}
+    t[2] = {}
+    local i = 1
+    for k,v in pairs(self) do
+        t[1][i] = k
+        t[2][i] = v
+        i = i + 1
+    end
+    return t
+end
+
+function SyncedTable.FromIndexedTables(tbl)
+    local new = SyncedTable.create()
+    for i = 1, #tbl[1] do
+        new[tbl[1][i]] = tbl[2][i]
+    end
+    return new
+end
+end  --- Table and Array Helpers
+
+do --- Game Status Detection (Online/Offline/Replay)
 -- Useful globals that tells you if the game is offline (single player I think), online or replay.
 -- The first 3 are constants and should not be changed
 GAME_STATUS_OFFLINE = 0
@@ -89,8 +142,9 @@ OnInit.global(function()
     gameStartTimer = CreateTimer()
     TimerStart(gameStartTimer, 0xF4240, false, nil)
 end)
+end --- Game Status Detection
 
-
+do --- Chat Command Handler
 --- Handle chat commands - listens to any user input starting with "-". Splits the input by spaces and calls the appropriate handler function with the command arguments and the trigger player as arguments.
 
 -- Table mapping event chat command to their handler functions
@@ -136,6 +190,7 @@ OnInit.trig(function()
         ["-f"] = FlushLog,
     }
 end)
+end --- Chat Command Handler
 
 end
 if Debug then Debug.endFile() end
